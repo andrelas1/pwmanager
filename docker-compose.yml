@@ -1,0 +1,57 @@
+#create a network and add our services into this network:
+#so, "app" service will be able to connect to the mysql database from "db" servoce by the hostname="db":
+#jdbc:mysql://db:3306/DOCKERDB
+
+#Connection url for connection in the DatabaseView:
+#  jdbc:mysql://0.0.0.0:13306/DOCKERDB, login=root, password=root
+#App is available at: http://localhost:18080/entitybus/post
+version: "3.9"
+
+networks:
+  app_network:
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: password-app:latest
+    env_file:
+      - .env
+    ports:
+      - "9000:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+
+  db:
+    image: postgres:14.5
+    restart: always
+    user: postgres
+    env_file:
+      - .env
+    container_name: db
+    ports:
+      - "5432:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app_network
+  adminer:
+    image: adminer
+    container_name: adminer
+    restart: always
+    ports:
+      - "8081:8080"
+    networks:
+      - app_network
+volumes:
+  db:
+    driver: local
